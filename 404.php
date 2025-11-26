@@ -208,7 +208,7 @@ $currentLang = isset($_COOKIE['language']) ? $_COOKIE['language'] : 'hr';
     <div class="shape shape-3"></div>
   </div>
   
-  <a href="index.php" class="logo">
+  <a href="/" class="logo">
     <span class="logo-start">Start</span><span class="logo-smart">Smart</span>
   </a>
   
@@ -219,7 +219,7 @@ $currentLang = isset($_COOKIE['language']) ? $_COOKIE['language'] : 'hr';
       Ups! Stranica koju tražite ne postoji ili je premještena. 
       Provjerite URL ili se vratite na početnu stranicu.
     </p>
-    <a href="index.php" class="btn">
+    <a href="/" class="btn">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M19 12H5M12 19l-7-7 7-7"/>
       </svg>
