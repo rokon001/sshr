@@ -160,20 +160,33 @@ class PortfolioApp {
     });
 
 
-    // hCaptcha validation
-    let hcaptchaValid = false;
+    // Turnstile validation
+    let turnstileValid = false;
+    let turnstileToken = null;
 
-    // hCaptcha callback functions
-    window.onHcaptchaSuccess = function(token) {
-      hcaptchaValid = true;
+    // Turnstile callback functions
+    window.onTurnstileSuccess = function(token) {
+      turnstileValid = true;
+      turnstileToken = token;
       const robotError = document.getElementById('robot-error');
       if (robotError) {
         robotError.style.display = 'none';
       }
     };
 
-    window.onHcaptchaExpired = function() {
-      hcaptchaValid = false;
+    window.onTurnstileError = function() {
+      turnstileValid = false;
+      turnstileToken = null;
+      const robotError = document.getElementById('robot-error');
+      if (robotError) {
+        robotError.textContent = getTranslation('contact-form-robot-error');
+        robotError.style.display = 'block';
+      }
+    };
+
+    window.onTurnstileExpired = function() {
+      turnstileValid = false;
+      turnstileToken = null;
     };
 
 
@@ -204,8 +217,8 @@ class PortfolioApp {
           }
         });
 
-        // Validate hCaptcha
-        if (!hcaptchaValid) {
+        // Validate Turnstile
+        if (!turnstileValid) {
           const robotError = document.getElementById('robot-error');
           if (robotError) {
             robotError.textContent = getTranslation('contact-form-robot-error');
@@ -229,10 +242,11 @@ class PortfolioApp {
           // Show success message
           showSuccessMessage();
           form.reset();
-          // Reset hCaptcha
-          if (typeof hcaptcha !== 'undefined') {
-            hcaptcha.reset();
-            hcaptchaValid = false;
+          // Reset Turnstile
+          if (typeof window.turnstileWidgetId !== 'undefined' && window.turnstileWidgetId !== null && typeof turnstile !== 'undefined') {
+            turnstile.reset(window.turnstileWidgetId);
+            turnstileValid = false;
+            turnstileToken = null;
           }
           // Reset all form groups to unfocused state
           document.querySelectorAll('.form__group').forEach(group => {
@@ -443,6 +457,11 @@ class PortfolioApp {
         html.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
         
+        // Update Turnstile with new theme
+        if (typeof window.updateTurnstile === 'function') {
+          window.updateTurnstile();
+        }
+        
         // Log theme change
         console.log(`Theme changed to: ${newTheme}`);
       });
@@ -521,9 +540,9 @@ class PortfolioApp {
     this.updateActiveFlag(lang);
     this.translatePage(lang);
     
-    // Recreate hCaptcha with new language
-    if (typeof window.recreateHcaptcha === 'function') {
-      window.recreateHcaptcha(lang);
+    // Update Turnstile with new language and theme
+    if (typeof window.updateTurnstile === 'function') {
+      window.updateTurnstile();
     }
   }
 
@@ -688,12 +707,23 @@ class PortfolioApp {
         'package-basic-title': 'Osnovna Stranica',
         'package-pro-title': 'Profesionalna Stranica',
         'package-premium-title': 'Premium Stranica',
-        'package-visit-first': 'Posjetite prvi primjer stranice',
-        'package-visit-second': 'Posjetite drugi primjer stranice',
+        'package-custom-title': 'Custom Projekt',
+        'package-visit-first': 'Posjetite stranicu',
+        'package-visit-second': 'Posjetite stranicu',
         'package-visit-site': 'Posjetite stranicu',
         'package-details': 'Detalji',
         'package-details-hover': 'Prikaži detalje',
         'package-details-hide': 'Sakrij detalje',
+        'package-optional-services': 'Dodatne mjesečne usluge',
+        'package-optional-services-hide': 'Sakrij dodatne usluge',
+        'optional-services-title': 'Dodatne mjesečne usluge:',
+        'optional-service-maintenance': 'Održavanje stranice',
+        'optional-service-maintenance-desc': 'Redovita sigurnosna ažuriranja, zaštita od hakiranja, DDoS zaštita, SSL certifikati, backup sustavi, praćenje performansi, optimizacija brzine, ažuriranje plugina i frameworka, tehnička podrška 24/7',
+        'optional-service-content-changes': 'Osnovne promjene sadržaja',
+        'optional-service-content-changes-desc': 'Promjene teksta i slika na vašoj stranici',
+        'pricing-month': ' mjesečno',
+        'pricing-by-agreement': 'po dogovoru',
+        'feature-bugs-security': '7 dana besplatnih bug fixova i sigurnosnih ažuriranja',
         'details-title': 'Dodatni detalji:',
         'details-basic-1': 'Jednostavna navigacija',
         'details-basic-2': 'Kontakt forma',
@@ -707,11 +737,25 @@ class PortfolioApp {
         'details-premium-2': 'Višekorisnički sustav (Login/Signup)',
         'details-premium-3': 'Personalizirani dizajn',
         'details-premium-4': 'Vrhunska korisnička podrška',
+        'details-custom-1': 'Individualna konzultacija',
+        'details-custom-2': 'Prilagođene integracije',
+        'details-custom-3': 'Napredna sigurnost',
+        'details-custom-4': 'Kontinuirana podrška',
         'hero-contact': 'Kontaktirajte nas',
         // Package descriptions
         'package-basic-desc': 'Pojednostavljeno rješenje za vaš prvi online korak. Idealno za osobne projekte i male tvrtke.',
         'package-pro-desc': 'Napredno rješenje s modernim CMS-om i interaktivnim elementima, idealno za srednje i velike tvrtke.',
         'package-premium-desc': 'Kompletno rješenje s najnovijim tehnologijama, prilagođeno kompleksnim zahtjevima i integracijama.',
+        'package-custom-desc': 'Potpuno prilagođeno rješenje za velike projekte s jedinstvenim zahtjevima. Kontaktirajte nas za detalje.',
+        'package-custom-eta': 'ETA: Po dogovoru',
+        'badge-custom': 'Custom',
+        'pricing-contact': 'Kontaktirajte nas',
+        'pricing-custom': 'za ponudu',
+        'package-contact-us': 'Kontaktirajte nas',
+        'feature-custom-design': 'Potpuno prilagođen dizajn',
+        'feature-custom-functionality': 'Prilagođena funkcionalnost',
+        'feature-dedicated-support': 'Dedicirani tim za podršku',
+        'feature-scalable': 'Skalabilna arhitektura',
         // About page translations
         'about-subtitle': 'O nama',
         'about-title': 'Naša priča',
@@ -883,7 +927,7 @@ class PortfolioApp {
         'footer-basic': 'Osnovna stranica',
         'footer-professional': 'Profesionalna stranica',
         'footer-premium': 'Premium stranica',
-        'footer-consultation': 'Konsultacije',
+        'footer-consultation': 'Konzultacije',
         'footer-copyright': '© 2025 Start Smart HR. Sva prava pridržana.',
         // Form validation errors
         'error-name-required': 'Ime je obavezno',
@@ -976,12 +1020,23 @@ class PortfolioApp {
         'package-basic-title': 'Basic Website',
         'package-pro-title': 'Professional Website',
         'package-premium-title': 'Premium Website',
-        'package-visit-first': 'Visit first example site',
-        'package-visit-second': 'Visit second example site',
+        'package-custom-title': 'Custom Project',
+        'package-visit-first': 'Visit website',
+        'package-visit-second': 'Visit website',
         'package-visit-site': 'Visit website',
         'package-details': 'Details',
         'package-details-hover': 'Show details',
         'package-details-hide': 'Hide details',
+        'package-optional-services': 'Additional monthly services',
+        'package-optional-services-hide': 'Hide additional services',
+        'optional-services-title': 'Additional monthly services:',
+        'optional-service-maintenance': 'Site maintenance',
+        'optional-service-maintenance-desc': 'Regular security updates, anti-hacking protection, DDoS protection, SSL certificates, backup solutions, performance monitoring, speed optimization, plugin and framework updates, 24/7 technical support',
+        'optional-service-content-changes': 'Basic content changes',
+        'optional-service-content-changes-desc': 'Text and image changes on your website',
+        'pricing-month': '/month',
+        'pricing-by-agreement': 'by agreement',
+        'feature-bugs-security': '7 days free bug fixes and security updates',
         'details-title': 'Additional details:',
         'details-basic-1': 'Simple navigation',
         'details-basic-2': 'Contact form',
@@ -995,11 +1050,25 @@ class PortfolioApp {
         'details-premium-2': 'Multi-user system (Login/Signup)',
         'details-premium-3': 'Personalized design',
         'details-premium-4': 'Premium customer support',
+        'details-custom-1': 'Individual consultation',
+        'details-custom-2': 'Custom integrations',
+        'details-custom-3': 'Advanced security',
+        'details-custom-4': 'Ongoing support',
         'hero-contact': 'Contact us',
         // Package descriptions
         'package-basic-desc': 'Simplified solution for your first online step. Ideal for personal projects and small businesses.',
         'package-pro-desc': 'Advanced solution with modern CMS and interactive elements, ideal for medium and large companies.',
         'package-premium-desc': 'Complete solution with the latest technologies, tailored to complex requirements and integrations.',
+        'package-custom-desc': 'Fully customized solution for large projects with unique requirements. Contact us for details.',
+        'package-custom-eta': 'ETA: By agreement',
+        'badge-custom': 'Custom',
+        'pricing-contact': 'Contact us',
+        'pricing-custom': 'for a quote',
+        'package-contact-us': 'Contact us',
+        'feature-custom-design': 'Fully customized design',
+        'feature-custom-functionality': 'Custom functionality',
+        'feature-dedicated-support': 'Dedicated support team',
+        'feature-scalable': 'Scalable architecture',
         // About page translations
         'about-subtitle': 'About us',
         'about-title': 'Our story',
@@ -1327,6 +1396,39 @@ function toggleDetails(id) {
         } else {
           // Details are being opened, show "Hide details"
           textElement.textContent = translations[currentLang]['package-details-hide'];
+        }
+      }
+    }
+  }
+}
+
+function toggleOptional(id) {
+  const element = document.getElementById(id);
+  if (element) {
+    const isActive = element.classList.contains('package-card__optional--active');
+    element.classList.toggle('package-card__optional--active');
+    
+    // Find the corresponding button
+    const button = document.querySelector(`[onclick="toggleOptional('${id}')"]`);
+    if (button) {
+      const textElement = button.querySelector('.btn__text');
+      if (textElement) {
+        const currentLang = document.documentElement.getAttribute('data-lang') || 'hr';
+        const translations = {
+          hr: {
+            'package-optional-services': 'Dodatne mjesečne usluge',
+            'package-optional-services-hide': 'Sakrij dodatne usluge'
+          },
+          en: {
+            'package-optional-services': 'Additional monthly services',
+            'package-optional-services-hide': 'Hide additional services'
+          }
+        };
+        
+        if (isActive) {
+          textElement.textContent = translations[currentLang]['package-optional-services'];
+        } else {
+          textElement.textContent = translations[currentLang]['package-optional-services-hide'];
         }
       }
     }
