@@ -136,7 +136,12 @@
         e.preventDefault();
         
         const message = input.value.trim();
-        if (!message || !conversationId) return;
+        if (!message) {
+            input.classList.add('error');
+            setTimeout(() => input.classList.remove('error'), 500);
+            return;
+        }
+        if (!conversationId) return;
 
         input.value = '';
         input.disabled = true;

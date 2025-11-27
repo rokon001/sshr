@@ -1023,7 +1023,7 @@
       <div id="chat-messages" class="chat-messages"></div>
       
       <form id="chat-form" class="chat-form">
-        <input type="text" id="chat-input" class="chat-input" placeholder="Napišite poruku..." autocomplete="off" required>
+        <input type="text" id="chat-input" class="chat-input" placeholder="Napišite poruku..." autocomplete="off">
         <button type="submit" class="chat-send" aria-label="Send message">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13"></line>
