@@ -189,5 +189,37 @@ CREATE TABLE `pages` (
   UNIQUE KEY `slug` (`slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ----------------------------
+-- Table: chat_conversations
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_conversations`;
+CREATE TABLE `chat_conversations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `visitor_id` varchar(64) NOT NULL,
+  `visitor_name` varchar(100) DEFAULT NULL,
+  `visitor_email` varchar(100) DEFAULT NULL,
+  `status` enum('active','closed') DEFAULT 'active',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `visitor_id` (`visitor_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------
+-- Table: chat_messages
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_messages`;
+CREATE TABLE `chat_messages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `conversation_id` int(11) NOT NULL,
+  `sender_type` enum('visitor','admin') NOT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `conversation_id` (`conversation_id`),
+  CONSTRAINT `chat_messages_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `chat_conversations` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 

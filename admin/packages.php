@@ -8,11 +8,33 @@ require_once 'includes/header.php';
 $message = '';
 $error = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    // For now, show message that database is needed
-    if (!dbAvailable()) {
-        $error = 'Baza podataka nije povezana. Molimo konfigurirajte database.php';
+// Handle success messages from redirect
+if (isset($_GET['success'])) {
+    if ($_GET['success'] === 'created') $message = 'Paket uspješno kreiran!';
+    if ($_GET['success'] === 'updated') $message = 'Paket uspješno ažuriran!';
+}
+
+// Handle delete
+if (isset($_GET['delete']) && dbAvailable()) {
+    $id = (int)$_GET['delete'];
+    try {
+        $stmt = db()->prepare("DELETE FROM packages WHERE id = ?");
+        $stmt->execute([$id]);
+        $message = 'Paket uspješno obrisan.';
+    } catch (Exception $e) {
+        $error = 'Greška pri brisanju paketa.';
+    }
+}
+
+// Handle toggle active
+if (isset($_GET['toggle']) && dbAvailable()) {
+    $id = (int)$_GET['toggle'];
+    try {
+        $stmt = db()->prepare("UPDATE packages SET active = NOT active WHERE id = ?");
+        $stmt->execute([$id]);
+        $message = 'Status paketa ažuriran.';
+    } catch (Exception $e) {
+        $error = 'Greška pri ažuriranju statusa.';
     }
 }
 
@@ -157,6 +179,8 @@ if (dbAvailable()) {
                         <div class="table-actions">
                             <?php if (dbAvailable()): ?>
                             <a href="package-edit.php?id=<?php echo $package['id']; ?>" class="btn btn--secondary btn--sm">Uredi</a>
+                            <a href="?toggle=<?php echo $package['id']; ?>" class="btn btn--secondary btn--sm"><?php echo $package['active'] ? 'Deaktiviraj' : 'Aktiviraj'; ?></a>
+                            <a href="?delete=<?php echo $package['id']; ?>" class="btn btn--danger btn--sm" onclick="return confirm('Jeste li sigurni?')">Obriši</a>
                             <?php else: ?>
                             <button class="btn btn--secondary btn--sm" disabled title="Potrebna baza podataka">Uredi</button>
                             <?php endif; ?>

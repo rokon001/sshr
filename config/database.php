@@ -5,13 +5,13 @@
  */
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database_name');
-define('DB_USER', 'your_database_user');
-define('DB_PASS', 'your_database_password');
+define('DB_NAME', 'startsmarthreu_sshr');
+define('DB_USER', 'startsmarthreu_roko');
+define('DB_PASS', 'RokoKoko123!!!');
 define('DB_CHARSET', 'utf8mb4');
 
 // Site settings
-define('SITE_URL', 'https://yourdomain.com');
+define('SITE_URL', 'startsmarthr.eu');
 define('SITE_NAME', 'Start Smart HR');
 define('ADMIN_EMAIL', 'info@startsmarthr.eu');
 
