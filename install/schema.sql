@@ -85,6 +85,7 @@ CREATE TABLE `packages` (
   `show_discount` tinyint(1) DEFAULT 1,
   `visit_url` varchar(255) DEFAULT NULL,
   `visit_url_2` varchar(255) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
   `sort_order` int(11) DEFAULT 0,
   `active` tinyint(1) DEFAULT 1,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,

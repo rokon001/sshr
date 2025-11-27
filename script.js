@@ -1316,6 +1316,23 @@ class PortfolioApp {
 
     // Apply hover translations
     this.applyHoverTranslations(lang, translations);
+    
+    // Handle data-lang-hr and data-lang-en elements (for dynamic content from database)
+    this.applyDynamicLanguage(lang);
+  }
+
+  applyDynamicLanguage(lang) {
+    // Show/hide elements based on language
+    const hrElements = document.querySelectorAll('[data-lang-hr]');
+    const enElements = document.querySelectorAll('[data-lang-en]');
+    
+    hrElements.forEach(el => {
+      el.style.display = lang === 'hr' ? '' : 'none';
+    });
+    
+    enElements.forEach(el => {
+      el.style.display = lang === 'en' ? '' : 'none';
+    });
   }
 
   applyHoverTranslations(lang, translations) {

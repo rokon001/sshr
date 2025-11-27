@@ -85,6 +85,12 @@ switch ($action) {
             exit;
         }
         
+        // Get conversation status
+        $stmt = db()->prepare("SELECT status FROM chat_conversations WHERE id = ?");
+        $stmt->execute([$conversationId]);
+        $conv = $stmt->fetch();
+        $status = $conv ? $conv['status'] : 'closed';
+        
         $sql = "SELECT * FROM chat_messages WHERE conversation_id = ?";
         $params = [$conversationId];
         
@@ -105,7 +111,7 @@ switch ($action) {
             $stmt->execute([$conversationId]);
         }
         
-        echo json_encode(['success' => true, 'messages' => $messages]);
+        echo json_encode(['success' => true, 'messages' => $messages, 'status' => $status]);
         break;
         
     case 'list':

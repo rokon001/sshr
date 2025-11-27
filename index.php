@@ -1,3 +1,36 @@
+<?php
+require_once __DIR__ . '/config/database.php';
+
+// Load packages from database
+$packages = [];
+$packageFeatures = [];
+$packageDetails = [];
+$optionalServices = [];
+
+if (dbAvailable()) {
+    try {
+        $stmt = db()->query("SELECT * FROM packages WHERE active = 1 ORDER BY sort_order ASC");
+        $packages = $stmt->fetchAll();
+        
+        // Load features and details for each package
+        foreach ($packages as $pkg) {
+            $stmt = db()->prepare("SELECT * FROM package_features WHERE package_id = ? ORDER BY sort_order ASC");
+            $stmt->execute([$pkg['id']]);
+            $packageFeatures[$pkg['id']] = $stmt->fetchAll();
+            
+            $stmt = db()->prepare("SELECT * FROM package_details WHERE package_id = ? ORDER BY sort_order ASC");
+            $stmt->execute([$pkg['id']]);
+            $packageDetails[$pkg['id']] = $stmt->fetchAll();
+        }
+        
+        // Load optional services
+        $stmt = db()->query("SELECT * FROM optional_services WHERE active = 1 ORDER BY sort_order ASC");
+        $optionalServices = $stmt->fetchAll();
+    } catch (Exception $e) {
+        // Use empty arrays as fallback
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -322,341 +355,154 @@
       </div>
       
       <div class="packages__grid">
-        <!-- Osnovna Stranica -->
-        <div class="package-card">
+        <?php 
+        foreach ($packages as $pkg): 
+            $slug = $pkg['slug'];
+            $isFeatured = $pkg['is_featured'];
+            $badgeClass = '';
+            if ($pkg['badge_type'] === 'featured') $badgeClass = 'package-card__badge--featured';
+            elseif ($pkg['badge_type'] === 'premium') $badgeClass = 'package-card__badge--premium';
+            elseif ($pkg['badge_type'] === 'custom') $badgeClass = 'package-card__badge--custom';
+            
+            $image = !empty($pkg['image']) ? $pkg['image'] : 'images/comingsoon.jpg';
+            $features = $packageFeatures[$pkg['id']] ?? [];
+            $details = $packageDetails[$pkg['id']] ?? [];
+        ?>
+        <div class="package-card <?php echo $isFeatured ? 'package-card--featured' : ''; ?>">
+          <?php if ($pkg['show_discount'] && $pkg['price'] && $pkg['original_price']): ?>
           <div class="package-card__discount-banner" data-translate="discount-banner">50% POPUST</div>
+          <?php endif; ?>
           <div class="package-card__header">
             <div class="package-card__image">
-              <img src="images/osnovna_primjer.JPG" alt="Osnovna Stranica">
+              <img src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($pkg['title_hr']); ?>">
               <div class="package-card__overlay"></div>
             </div>
-            <div class="package-card__badge" data-translate="badge-basic">Osnovni</div>
+            <div class="package-card__badge <?php echo $badgeClass; ?>">
+              <span data-lang-hr><?php echo htmlspecialchars($pkg['badge_hr']); ?></span>
+              <span data-lang-en style="display:none;"><?php echo htmlspecialchars($pkg['badge_en']); ?></span>
+            </div>
           </div>
           <div class="package-card__content">
-            <h3 class="package-card__title" data-translate="package-basic-title">Osnovna Stranica</h3>
-            <div class="package-card__eta" data-translate="package-basic-eta">ETA: 24-48 sati</div>
-            <p class="package-card__description" data-translate="package-basic-desc">
-              Pojednostavljeno rješenje za vaš prvi online korak. Idealno za osobne projekte i male tvrtke.
+            <h3 class="package-card__title">
+              <span data-lang-hr><?php echo htmlspecialchars($pkg['title_hr']); ?></span>
+              <span data-lang-en style="display:none;"><?php echo htmlspecialchars($pkg['title_en']); ?></span>
+            </h3>
+            <div class="package-card__eta">
+              <span data-lang-hr><?php echo htmlspecialchars($pkg['eta_hr']); ?></span>
+              <span data-lang-en style="display:none;"><?php echo htmlspecialchars($pkg['eta_en']); ?></span>
+            </div>
+            <p class="package-card__description">
+              <span data-lang-hr><?php echo htmlspecialchars($pkg['description_hr']); ?></span>
+              <span data-lang-en style="display:none;"><?php echo htmlspecialchars($pkg['description_en']); ?></span>
             </p>
             <ul class="package-card__features">
+              <?php foreach ($features as $feature): ?>
               <li class="feature-item">
                 <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-responsive">Responzivan dizajn</span>
+                <span class="feature-item__text">
+                  <span data-lang-hr><?php echo htmlspecialchars($feature['feature_hr']); ?></span>
+                  <span data-lang-en style="display:none;"><?php echo htmlspecialchars($feature['feature_en']); ?></span>
+                </span>
               </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-fast-loading">Brzo učitavanje</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-seo">SEO optimizacija</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-social">Integracija društvenih mreža</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-bugs-security">7 dana besplatnih bug fixova i sigurnosnih ažuriranja</span>
-              </li>
+              <?php endforeach; ?>
             </ul>
             <div class="package-card__pricing">
+              <?php if ($pkg['price']): ?>
               <div class="pricing">
                 <div class="pricing__row">
-                  <span class="pricing__original">€600</span>
-                  <span class="pricing__amount">€300</span>
+                  <?php if ($pkg['original_price']): ?>
+                  <span class="pricing__original">€<?php echo number_format($pkg['original_price'], 0); ?></span>
+                  <?php endif; ?>
+                  <span class="pricing__amount">€<?php echo number_format($pkg['price'], 0); ?></span>
                 </div>
                 <div class="pricing__period" data-translate="pricing-once">jednokratno</div>
               </div>
+              <?php endif; ?>
             </div>
             <div class="package-card__actions">
-              <a href="https://osnovna-stranica-1.netlify.app/" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
-                <span class="btn__text" data-translate="package-visit-first">Posjetite prvi primjer stranice</span>
+              <?php if ($pkg['visit_url']): ?>
+              <a href="<?php echo htmlspecialchars($pkg['visit_url']); ?>" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
+                <span class="btn__text">
+                  <?php if ($pkg['visit_url_2']): ?>
+                  <span data-lang-hr>Posjetite prvi primjer stranice</span>
+                  <span data-lang-en style="display:none;">Visit first example</span>
+                  <?php else: ?>
+                  <span data-lang-hr>Posjetite stranicu</span>
+                  <span data-lang-en style="display:none;">Visit website</span>
+                  <?php endif; ?>
+                </span>
               </a>
-              <a href="https://osnovna-stranica-2.netlify.app/" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
-                <span class="btn__text" data-translate="package-visit-second">Posjetite drugi primjer stranice</span>
+              <?php endif; ?>
+              <?php if ($pkg['visit_url_2']): ?>
+              <a href="<?php echo htmlspecialchars($pkg['visit_url_2']); ?>" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
+                <span class="btn__text">
+                  <span data-lang-hr>Posjetite drugi primjer stranice</span>
+                  <span data-lang-en style="display:none;">Visit second example</span>
+                </span>
               </a>
-              <button class="btn btn--outline toggle-details" onclick="toggleDetails('basic-details')" data-translate-hover="package-details-hover">
-                <span class="btn__text" data-translate="package-details">Detalji</span>
-              </button>
-            </div>
-            <div class="package-card__details" id="basic-details">
-              <div class="details">
-                <h4 class="details__title" data-translate="details-title">Dodatni detalji:</h4>
-                <ul class="details__list">
-                  <li data-translate="details-basic-1">Jednostavna navigacija</li>
-                  <li data-translate="details-basic-2">Kontakt forma</li>
-                  <li data-translate="details-basic-3">Osnovne animacije</li>
-                  <li data-translate="details-basic-4">Prilagođen layout</li>
-                </ul>
-              </div>
-            </div>
-            <div class="package-card__actions package-card__actions--optional">
-              <button class="btn btn--outline toggle-optional" onclick="toggleOptional('basic-optional')">
-                <span class="btn__text" data-translate="package-optional-services">Dodatne mjesečne usluge</span>
-              </button>
-            </div>
-            <div class="package-card__optional" id="basic-optional">
-              <div class="optional-services">
-                <h4 class="optional-services__title" data-translate="optional-services-title">Dodatne mjesečne usluge:</h4>
-                <div class="optional-service">
-                  <h5 class="optional-service__name" data-translate="optional-service-maintenance">Održavanje stranice</h5>
-                  <span class="optional-service__price" data-translate="pricing-by-agreement">(po dogovoru)</span>
-                  <p class="optional-service__description" data-translate="optional-service-maintenance-desc">Redovite sigurnosne ažuriranje, zaštita od hakiranja, DDoS zaštita, SSL certifikati, backup rješenja, monitoring performansi, optimizacija brzine, ažuriranje plugina i frameworka, tehnička podrška 24/7</p>
-                </div>
-                <div class="optional-service">
-                  <h5 class="optional-service__name" data-translate="optional-service-content-changes">Osnovne promjene sadržaja</h5>
-                  <span class="optional-service__price">50€<span data-translate="pricing-month">/mjesec</span></span>
-                  <p class="optional-service__description" data-translate="optional-service-content-changes-desc">Promjene teksta i slika na vašoj stranici</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Profesionalna Stranica -->
-        <div class="package-card package-card--featured">
-          <div class="package-card__discount-banner" data-translate="discount-banner">50% POPUST</div>
-          <div class="package-card__header">
-            <div class="package-card__image">
-              <img src="images/profesionalna_stranica.png" alt="Profesionalna Stranica">
-              <div class="package-card__overlay"></div>
-            </div>
-            <div class="package-card__badge package-card__badge--featured" data-translate="badge-recommended">Preporučeno</div>
-          </div>
-          <div class="package-card__content">
-            <h3 class="package-card__title" data-translate="package-pro-title">Profesionalna Stranica</h3>
-            <div class="package-card__eta" data-translate="package-pro-eta">ETA: 72 sata</div>
-            <p class="package-card__description" data-translate="package-pro-desc">
-              Napredno rješenje s modernim CMS-om i interaktivnim elementima, idealno za srednje i velike tvrtke.
-            </p>
-            <ul class="package-card__features">
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-advanced-cms">Napredni CMS</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-interactive">Interaktivni elementi</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-blog-gallery">Integracija bloga i galerije</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-security">Sigurnosni protokoli</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-bugs-security">7 dana besplatnih bug fixova i sigurnosnih ažuriranja</span>
-              </li>
-            </ul>
-            <div class="package-card__pricing">
-              <div class="pricing">
-                <div class="pricing__row">
-                  <span class="pricing__original">€1000</span>
-                  <span class="pricing__amount">€500</span>
-                </div>
-                <div class="pricing__period" data-translate="pricing-once">jednokratno</div>
-              </div>
-            </div>
-            <div class="package-card__actions">
-              <a href="https://profesionalnastranica.pythonanywhere.com/" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
-                <span class="btn__text" data-translate="package-visit-site">Posjetite stranicu</span>
-              </a>
-              <button class="btn btn--outline toggle-details" onclick="toggleDetails('pro-details')" data-translate-hover="package-details-hover">
-                <span class="btn__text" data-translate="package-details">Detalji</span>
-              </button>
-            </div>
-            <div class="package-card__details" id="pro-details">
-              <div class="details">
-                <h4 class="details__title" data-translate="details-title">Dodatni detalji:</h4>
-                <ul class="details__list">
-                  <li data-translate="details-pro-1">Responsiv dizajn s naprednom animacijom</li>
-                  <li data-translate="details-pro-2">CMS integracija</li>
-                  <li data-translate="details-pro-3">Blog i galerija</li>
-                  <li data-translate="details-pro-4">Brza optimizacija performansi</li>
-                </ul>
-              </div>
-            </div>
-            <div class="package-card__actions package-card__actions--optional">
-              <button class="btn btn--outline toggle-optional" onclick="toggleOptional('pro-optional')">
-                <span class="btn__text" data-translate="package-optional-services">Dodatne mjesečne usluge</span>
-              </button>
-            </div>
-            <div class="package-card__optional" id="pro-optional">
-              <div class="optional-services">
-                <h4 class="optional-services__title" data-translate="optional-services-title">Dodatne mjesečne usluge:</h4>
-                <div class="optional-service">
-                  <h5 class="optional-service__name" data-translate="optional-service-maintenance">Održavanje stranice</h5>
-                  <span class="optional-service__price" data-translate="pricing-by-agreement">(po dogovoru)</span>
-                  <p class="optional-service__description" data-translate="optional-service-maintenance-desc">Redovite sigurnosne ažuriranje, zaštita od hakiranja, DDoS zaštita, SSL certifikati, backup rješenja, monitoring performansi, optimizacija brzine, ažuriranje plugina i frameworka, tehnička podrška 24/7</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Premium Stranica -->
-        <div class="package-card">
-          <div class="package-card__discount-banner"  data-translate="discount-banner">50% POPUST </div>
-          <div class="package-card__header">
-            <div class="package-card__image">
-              <img src="images/comingsoon.jpg" alt="Premium Stranica">
-              <div class="package-card__overlay"></div>
-            </div>
-            <div class="package-card__badge package-card__badge--premium">Premium</div>
-          </div>
-          <div class="package-card__content">
-            <h3 class="package-card__title" data-translate="package-premium-title">Premium Stranica</h3>
-            <div class="package-card__eta" data-translate="package-premium-eta">ETA: 7 dana</div>
-            <p class="package-card__description" data-translate="package-premium-desc">
-              Kompletno rješenje s najnovijim tehnologijama, prilagođeno kompleksnim zahtjevima i integracijama.
-            </p>
-            <ul class="package-card__features">
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-ecommerce">E-commerce integracija</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-multi-user">Višekorisnički sustav (Login/Signup)</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-payment">Integracija plaćanja</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-analytics">Napredna analitika</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-bugs-security">7 dana besplatnih bug fixova i sigurnosnih ažuriranja</span>
-              </li>
-            </ul>
-            <div class="package-card__pricing">
-              <div class="pricing">
-                <div class="pricing__row">
-                  <span class="pricing__original">€2000</span>
-                  <span class="pricing__amount">€1000</span>
-                </div>
-                <div class="pricing__period" data-translate="pricing-once">jednokratno</div>
-              </div>
-            </div>
-            <div class="package-card__actions">
-              <a href="https://example.com" class="btn btn--primary btn--full" target="_blank" rel="noopener noreferrer">
-                <span class="btn__text" data-translate="package-visit-site">Posjetite stranicu</span>
-              </a>
-              <button class="btn btn--outline toggle-details" onclick="toggleDetails('premium-details')" data-translate-hover="package-details-hover">
-                <span class="btn__text" data-translate="package-details">Detalji</span>
-              </button>
-            </div>
-            <div class="package-card__details" id="premium-details">
-              <div class="details">
-                <h4 class="details__title" data-translate="details-title">Dodatni detalji:</h4>
-                <ul class="details__list">
-                  <li data-translate="details-premium-1">Prilagođene API integracije</li>
-                  <li data-translate="details-premium-2">Višekorisnički sustav (Login/Signup)</li>
-                  <li data-translate="details-premium-3">Personalizirani dizajn</li>
-                  <li data-translate="details-premium-4">Vrhunska korisnička podrška</li>
-                </ul>
-              </div>
-            </div>
-            <div class="package-card__actions package-card__actions--optional">
-              <button class="btn btn--outline toggle-optional" onclick="toggleOptional('premium-optional')">
-                <span class="btn__text" data-translate="package-optional-services">Dodatne mjesečne usluge</span>
-              </button>
-            </div>
-            <div class="package-card__optional" id="premium-optional">
-              <div class="optional-services">
-                <h4 class="optional-services__title" data-translate="optional-services-title">Dodatne mjesečne usluge:</h4>
-                <div class="optional-service">
-                  <h5 class="optional-service__name" data-translate="optional-service-maintenance">Održavanje stranice</h5>
-                  <span class="optional-service__price" data-translate="pricing-by-agreement">(po dogovoru)</span>
-                  <p class="optional-service__description" data-translate="optional-service-maintenance-desc">Redovite sigurnosne ažuriranje, zaštita od hakiranja, DDoS zaštita, SSL certifikati, backup rješenja, monitoring performansi, optimizacija brzine, ažuriranje plugina i frameworka, tehnička podrška 24/7</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Custom Stranica -->
-        <div class="package-card">
-          <div class="package-card__header">
-            <div class="package-card__image">
-              <img src="images/comingsoon.jpg" alt="Custom Stranica">
-              <div class="package-card__overlay"></div>
-            </div>
-            <div class="package-card__badge package-card__badge--custom" data-translate="badge-custom">Custom</div>
-          </div>
-          <div class="package-card__content">
-            <h3 class="package-card__title" data-translate="package-custom-title">Custom Projekt</h3>
-            <div class="package-card__eta" data-translate="package-custom-eta">ETA: Po dogovoru</div>
-            <p class="package-card__description" data-translate="package-custom-desc">
-              Potpuno prilagođeno rješenje za velike projekte s jedinstvenim zahtjevima. Kontaktirajte nas za detalje.
-            </p>
-            <ul class="package-card__features">
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-custom-design">Potpuno prilagođen dizajn</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-custom-functionality">Prilagođena funkcionalnost</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-dedicated-support">Dedicirani tim za podršku</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-scalable">Skalabilna arhitektura</span>
-              </li>
-              <li class="feature-item">
-                <span class="feature-item__icon">✓</span>
-                <span class="feature-item__text" data-translate="feature-bugs-security">7 dana besplatnih bug fixova i sigurnosnih ažuriranja</span>
-              </li>
-            </ul>
-            <div class="package-card__pricing">
-            </div>
-            <div class="package-card__actions">
+              <?php endif; ?>
+              <?php if (!$pkg['visit_url'] && $slug === 'custom'): ?>
               <a href="#contact" class="btn btn--primary btn--full">
                 <span class="btn__text" data-translate="package-contact-us">Kontaktirajte nas</span>
               </a>
-              <button class="btn btn--outline toggle-details" onclick="toggleDetails('custom-details')" data-translate-hover="package-details-hover">
+              <?php endif; ?>
+              <button class="btn btn--outline toggle-details" onclick="toggleDetails('<?php echo $slug; ?>-details')">
                 <span class="btn__text" data-translate="package-details">Detalji</span>
               </button>
             </div>
-            <div class="package-card__details" id="custom-details">
+            <div class="package-card__details" id="<?php echo $slug; ?>-details">
               <div class="details">
                 <h4 class="details__title" data-translate="details-title">Dodatni detalji:</h4>
                 <ul class="details__list">
-                  <li data-translate="details-custom-1">Individualna konzultacija</li>
-                  <li data-translate="details-custom-2">Prilagođene integracije</li>
-                  <li data-translate="details-custom-3">Napredna sigurnost</li>
-                  <li data-translate="details-custom-4">Kontinuirana podrška</li>
+                  <?php if (!empty($details)): ?>
+                    <?php foreach ($details as $detail): ?>
+                    <li>
+                      <span data-lang-hr><?php echo htmlspecialchars($detail['detail_hr']); ?></span>
+                      <span data-lang-en style="display:none;"><?php echo htmlspecialchars($detail['detail_en']); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <li>
+                      <span data-lang-hr>Nema dodatnih detalja</span>
+                      <span data-lang-en style="display:none;">No additional details</span>
+                    </li>
+                  <?php endif; ?>
                 </ul>
               </div>
             </div>
             <div class="package-card__actions package-card__actions--optional">
-              <button class="btn btn--outline toggle-optional" onclick="toggleOptional('custom-optional')">
+              <button class="btn btn--outline toggle-optional" onclick="toggleOptional('<?php echo $slug; ?>-optional')">
                 <span class="btn__text" data-translate="package-optional-services">Dodatne mjesečne usluge</span>
               </button>
             </div>
-            <div class="package-card__optional" id="custom-optional">
+            <div class="package-card__optional" id="<?php echo $slug; ?>-optional">
               <div class="optional-services">
                 <h4 class="optional-services__title" data-translate="optional-services-title">Dodatne mjesečne usluge:</h4>
+                <?php foreach ($optionalServices as $service): ?>
                 <div class="optional-service">
-                  <h5 class="optional-service__name" data-translate="optional-service-maintenance">Održavanje stranice</h5>
-                  <span class="optional-service__price" data-translate="pricing-by-agreement">(po dogovoru)</span>
-                  <p class="optional-service__description" data-translate="optional-service-maintenance-desc">Redovite sigurnosne ažuriranje, zaštita od hakiranja, DDoS zaštita, SSL certifikati, backup rješenja, monitoring performansi, optimizacija brzine, ažuriranje plugina i frameworka, tehnička podrška 24/7</p>
+                  <h5 class="optional-service__name">
+                    <span data-lang-hr><?php echo htmlspecialchars($service['name_hr']); ?></span>
+                    <span data-lang-en style="display:none;"><?php echo htmlspecialchars($service['name_en']); ?></span>
+                  </h5>
+                  <span class="optional-service__price">
+                    <?php if ($service['price']): ?>
+                      <?php echo number_format($service['price'], 0); ?>€<span data-translate="pricing-month">/mjesec</span>
+                    <?php else: ?>
+                      <span data-lang-hr><?php echo htmlspecialchars($service['price_text_hr'] ?? 'po dogovoru'); ?></span>
+                      <span data-lang-en style="display:none;"><?php echo htmlspecialchars($service['price_text_en'] ?? 'by agreement'); ?></span>
+                    <?php endif; ?>
+                  </span>
+                  <p class="optional-service__description">
+                    <span data-lang-hr><?php echo htmlspecialchars($service['description_hr']); ?></span>
+                    <span data-lang-en style="display:none;"><?php echo htmlspecialchars($service['description_en']); ?></span>
+                  </p>
                 </div>
+                <?php endforeach; ?>
               </div>
             </div>
           </div>
         </div>
+        <?php endforeach; ?>
       </div>
     </div>
   </section>

@@ -1973,9 +1973,8 @@ body {
   box-shadow: var(--shadow-md);
   transition: all var(--transition-normal), border-color 1.5s ease, box-shadow 1.5s ease;
   position: relative;
-  display: grid;
-  grid-template-rows: subgrid;
-  grid-row: span 9;
+  display: flex;
+  flex-direction: column;
   border: 2px solid transparent;
 }
 
@@ -2298,14 +2297,12 @@ body {
 }
 
 .package-card__optional {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height var(--transition-normal), padding var(--transition-normal);
-  margin-top: var(--space-20);
+  display: none;
+  margin-top: var(--space-4);
 }
 
 .package-card__optional--active {
-  max-height: 500px;
+  display: block;
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-neutral-200);
 }
@@ -4796,6 +4793,68 @@ body {
   color: var(--text-muted);
   font-size: 12px;
   padding: 8px;
+}
+
+.chat-message--closed {
+  align-self: center;
+}
+
+.chat-message--closed .chat-message-content {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 13px;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.chat-new-btn {
+  margin-top: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.chat-new-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.chat-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 40px;
+  margin: auto;
+}
+
+.chat-spinner-dot {
+  width: 10px;
+  height: 10px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: chatSpinnerBounce 1.4s ease-in-out infinite both;
+}
+
+.chat-spinner-dot:nth-child(1) { animation-delay: -0.32s; }
+.chat-spinner-dot:nth-child(2) { animation-delay: -0.16s; }
+.chat-spinner-dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes chatSpinnerBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .chat-message-time {

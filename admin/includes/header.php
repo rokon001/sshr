@@ -36,20 +36,18 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     Dashboard
                 </a>
                 
-                <a href="packages.php" class="sidebar__link <?php echo $currentPage === 'packages' ? 'active' : ''; ?>">
+                <a href="packages.php" class="sidebar__link <?php echo $currentPage === 'packages' || $currentPage === 'package-edit' ? 'active' : ''; ?>">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                     </svg>
                     Paketi
                 </a>
                 
-                <a href="translations.php" class="sidebar__link <?php echo $currentPage === 'translations' ? 'active' : ''; ?>">
+                <a href="services.php" class="sidebar__link <?php echo $currentPage === 'services' ? 'active' : ''; ?>">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
                     </svg>
-                    Prijevodi
+                    Dodatne usluge
                 </a>
                 
                 <a href="chat.php" class="sidebar__link <?php echo $currentPage === 'chat' ? 'active' : ''; ?>">

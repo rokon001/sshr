@@ -7,6 +7,7 @@
     let lastMessageId = 0;
     let pollInterval = null;
     let visitorId = null;
+    let conversationClosed = false;
 
     // Generate or get visitor ID
     function getVisitorId() {
@@ -51,12 +52,19 @@
         iconOpen.style.display = 'none';
         iconClose.style.display = 'block';
         badge.style.display = 'none';
-        input.focus();
         
         if (!conversationId) {
             startConversation();
         } else {
-            startPolling();
+            // Show spinner and load messages
+            showSpinner();
+            loadAllMessages().then(() => {
+                hideSpinner();
+                input.focus();
+                if (!conversationClosed) {
+                    startPolling();
+                }
+            });
         }
     }
 
@@ -69,6 +77,8 @@
 
     // Start conversation
     async function startConversation() {
+        showSpinner();
+        
         try {
             const formData = new FormData();
             formData.append('action', 'start');
@@ -83,8 +93,13 @@
             if (data.success) {
                 conversationId = data.conversation_id;
                 localStorage.setItem('chat_conversation_id', conversationId);
-                loadAllMessages();
-                startPolling();
+                loadAllMessages().then(() => {
+                    hideSpinner();
+                    input.focus();
+                    if (!conversationClosed) {
+                        startPolling();
+                    }
+                });
             }
         } catch (error) {
             console.error('Chat error:', error);
@@ -99,6 +114,14 @@
         try {
             const response = await fetch(`${API_URL}?action=get&conversation_id=${conversationId}&last_id=${lastMessageId}`);
             const data = await response.json();
+
+            // Check if conversation was closed
+            if (data.status === 'closed' && !conversationClosed) {
+                conversationClosed = true;
+                showClosedMessage();
+                disableInput();
+                stopPolling();
+            }
 
             if (data.success && data.messages.length > 0) {
                 data.messages.forEach(msg => {
@@ -123,12 +146,22 @@
             const response = await fetch(`${API_URL}?action=get&conversation_id=${conversationId}&last_id=0`);
             const data = await response.json();
 
+            // Check if conversation is closed
+            if (data.status === 'closed') {
+                conversationClosed = true;
+            }
+
             if (data.success && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     appendMessage(msg);
                     lastMessageId = Math.max(lastMessageId, parseInt(msg.id));
                 });
                 scrollToBottom();
+            }
+
+            if (conversationClosed) {
+                showClosedMessage();
+                disableInput();
             }
         } catch (error) {
             console.error('Load messages error:', error);
@@ -152,6 +185,50 @@
         div.innerHTML = `<div class="chat-message-content">${escapeHtml(text)}</div>`;
         messagesContainer.appendChild(div);
         scrollToBottom();
+    }
+
+    function showSpinner() {
+        messagesContainer.innerHTML = `
+            <div class="chat-spinner">
+                <div class="chat-spinner-dot"></div>
+                <div class="chat-spinner-dot"></div>
+                <div class="chat-spinner-dot"></div>
+            </div>
+        `;
+    }
+
+    function hideSpinner() {
+        const spinner = messagesContainer.querySelector('.chat-spinner');
+        if (spinner) spinner.remove();
+    }
+
+    function showClosedMessage() {
+        const div = document.createElement('div');
+        div.className = 'chat-message chat-message--closed';
+        div.innerHTML = `
+            <div class="chat-message-content">Razgovor je zatvoren. Hvala na poruci!</div>
+            <button class="chat-new-btn" onclick="window.chatWidget.startNew()">Započni novi razgovor</button>
+        `;
+        messagesContainer.appendChild(div);
+        scrollToBottom();
+    }
+
+    function disableInput() {
+        input.disabled = true;
+        input.placeholder = 'Razgovor je zatvoren';
+        form.querySelector('button').disabled = true;
+    }
+
+    function startNewConversation() {
+        conversationId = null;
+        lastMessageId = 0;
+        conversationClosed = false;
+        localStorage.removeItem('chat_conversation_id');
+        messagesContainer.innerHTML = '';
+        input.disabled = false;
+        input.placeholder = 'Napišite poruku...';
+        form.querySelector('button').disabled = false;
+        startConversation();
     }
 
     // Send message
@@ -260,5 +337,10 @@
 
     // Check for unread messages periodically
     setInterval(checkUnread, 10000);
+
+    // Expose startNew function globally
+    window.chatWidget = {
+        startNew: startNewConversation
+    };
 })();
 
