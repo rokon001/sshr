@@ -1902,7 +1902,7 @@ body {
 
 /* Packages Section */
 .packages {
-  padding: var(--space-32) 0;
+  padding: var(--space-32) 0 var(--space-8) 0;
 }
 
 .packages__container {
@@ -2230,6 +2230,33 @@ body {
   text-decoration: line-through;
 }
 
+/* Hidden pricing placeholder to maintain alignment */
+.pricing--hidden {
+  visibility: hidden;
+  height: auto;
+  pointer-events: none;
+}
+
+.pricing--hidden .pricing__row {
+  min-height: calc(var(--font-size-2xl) * 1.2); /* Match pricing__amount height */
+}
+
+.pricing--hidden .pricing__amount {
+  min-width: 80px; /* Approximate width for price amount */
+  display: inline-block;
+  min-height: calc(var(--font-size-2xl) * 1.2);
+}
+
+.pricing--hidden .pricing__original {
+  min-width: 40px; /* Approximate width for original price */
+  display: inline-block;
+}
+
+.pricing--hidden .pricing__period {
+  min-height: calc(var(--font-size-xs) * 1.5 + var(--space-1) * 2); /* Match period badge height with padding */
+  min-width: 100px; /* Approximate width of period badge */
+}
+
 /* Old discount styling removed */
 
 /* Discount pulse and shimmer animations removed */
@@ -2372,7 +2399,7 @@ body {
 
 /* Contact Section */
 .contact {
-  padding: var(--space-32) 0;
+  padding: var(--space-8) 0 var(--space-32) 0;
 }
 
 .contact__container {

@@ -417,6 +417,14 @@ if (dbAvailable()) {
                 </div>
                 <div class="pricing__period" data-translate="pricing-once">jednokratno</div>
               </div>
+              <?php else: ?>
+              <div class="pricing pricing--hidden">
+                <div class="pricing__row">
+                  <span class="pricing__original"></span>
+                  <span class="pricing__amount"></span>
+                </div>
+                <div class="pricing__period"></div>
+              </div>
               <?php endif; ?>
             </div>
             <div class="package-card__actions">
