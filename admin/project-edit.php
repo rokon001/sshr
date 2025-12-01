@@ -9,8 +9,78 @@ requireAuth();
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $error = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && dbAvailable()) {
+// Handle file deletion
+if (isset($_GET['delete_file']) && dbAvailable()) {
+    $fileId = (int)$_GET['delete_file'];
+    try {
+        $stmt = db()->prepare("SELECT file_path FROM project_files WHERE id = ? AND project_id = ?");
+        $stmt->execute([$fileId, $id]);
+        $file = $stmt->fetch();
+        
+        if ($file) {
+            $filePath = __DIR__ . '/../' . $file['file_path'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            
+            $stmt = db()->prepare("DELETE FROM project_files WHERE id = ?");
+            $stmt->execute([$fileId]);
+            header('Location: project-edit.php?id=' . $id . '&success=file_deleted');
+            exit;
+        }
+    } catch (Exception $e) {
+        $error = 'Greška pri brisanju datoteke: ' . $e->getMessage();
+    }
+}
+
+// Handle file uploads (separate from main form)
+if (isset($_POST['upload_files']) && $id > 0 && dbAvailable()) {
+    try {
+        // Check if table exists by trying to query it
+        try {
+            $testStmt = db()->query("SELECT 1 FROM project_files LIMIT 1");
+        } catch (Exception $e) {
+            throw new Exception('Tablica project_files ne postoji. Molimo prvo pokrenite SQL skriptu za kreiranje tablice.');
+        }
+        
+        $uploadDir = __DIR__ . '/../uploads/projects/' . $id . '/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        if (isset($_FILES['project_files'])) {
+            foreach ($_FILES['project_files']['name'] as $key => $fileName) {
+                if ($_FILES['project_files']['error'][$key] === UPLOAD_ERR_OK && !empty($fileName)) {
+                    $fileType = sanitize($_POST['file_types'][$key] ?? 'document');
+                    $tmpName = $_FILES['project_files']['tmp_name'][$key];
+                    $fileSize = $_FILES['project_files']['size'][$key];
+                    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                    
+                    // Allowed file types
+                    $allowed = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar'];
+                    
+                    if (in_array($ext, $allowed)) {
+                        $safeFileName = time() . '_' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $fileName);
+                        $filePath = $uploadDir . $safeFileName;
+                        
+                        if (move_uploaded_file($tmpName, $filePath)) {
+                            $relativePath = 'uploads/projects/' . $id . '/' . $safeFileName;
+                            $stmt = db()->prepare("INSERT INTO project_files (project_id, file_name, file_path, file_type, file_size) VALUES (?, ?, ?, ?, ?)");
+                            $stmt->execute([$id, $fileName, $relativePath, $fileType, $fileSize]);
+                        }
+                    }
+                }
+            }
+            header('Location: project-edit.php?id=' . $id . '&success=files_uploaded');
+            exit;
+        }
+    } catch (Exception $e) {
+        $error = 'Greška pri uploadu datoteka: ' . $e->getMessage();
+    }
+}
+
+// Handle form submission (exclude file uploads which are handled separately)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['upload_files']) && dbAvailable()) {
     try {
         $name = sanitize(trim($_POST['name'] ?? ''));
         $clientName = sanitize(trim($_POST['client_name'] ?? ''));
@@ -111,7 +181,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && dbAvailable()) {
             }
         }
         
-        header('Location: projects.php?success=' . ($id ? 'updated' : 'created'));
+        // Note: File uploads are handled separately via upload_files form
+        
+        // Debug: Log before redirect
+        error_log('Project saved successfully. ID: ' . $id . ', Redirecting...');
+        
+        header('Location: projects.php?success=' . ($id > 0 ? 'updated' : 'created'));
         exit;
         
     } catch (Exception $e) {
@@ -125,6 +200,7 @@ require_once 'includes/header.php';
 $project = null;
 $phases = [];
 $checklist = [];
+$projectFiles = [];
 
 // Load project data
 if ($id > 0 && dbAvailable()) {
@@ -160,6 +236,16 @@ if ($id > 0 && dbAvailable()) {
             if ($meeting) {
                 $project['meeting_date'] = $meeting['meeting_date'];
                 $project['meeting_notes'] = $meeting['notes'];
+            }
+            
+            // Load project files (if table exists)
+            try {
+                $stmt = db()->prepare("SELECT * FROM project_files WHERE project_id = ? ORDER BY uploaded_at DESC");
+                $stmt->execute([$id]);
+                $projectFiles = $stmt->fetchAll();
+            } catch (Exception $e) {
+                // Table might not exist yet
+                $projectFiles = [];
             }
         }
     } catch (Exception $e) {
@@ -206,7 +292,15 @@ $packageTypes = [
     <div class="alert alert--error"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<form method="POST" action="">
+<?php if (isset($_GET['success'])): ?>
+    <?php if ($_GET['success'] === 'files_uploaded'): ?>
+        <div class="alert alert--success">Datoteke su uspješno uploadane!</div>
+    <?php elseif ($_GET['success'] === 'file_deleted'): ?>
+        <div class="alert alert--success">Datoteka je uspješno obrisana!</div>
+    <?php endif; ?>
+<?php endif; ?>
+
+<form method="POST" action="" id="project-form">
     <div class="card">
         <div class="card__header">
             <h2 class="card__title"><?php echo $id > 0 ? 'Uredi Projekt' : 'Novi Projekt'; ?></h2>
@@ -317,14 +411,12 @@ $packageTypes = [
         <div class="card__body">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="color: var(--primary); margin: 0; font-size: 18px;">Faze projekta</h3>
-                <?php if ($id > 0): ?>
-                <button type="button" class="btn btn--accent btn--sm" onclick="autopopulateChecklist(<?php echo $id; ?>, '<?php echo $project['package_type']; ?>')" id="autopopulate-btn">
+                <button type="button" class="btn btn--accent btn--sm" onclick="autopopulateChecklist(<?php echo $id; ?>, '<?php echo $project['package_type'] ?? 'basic'; ?>')" id="autopopulate-btn">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
                         <path d="M12 2v20M2 12h20"></path>
                     </svg>
                     Auto-popuni checklist
                 </button>
-                <?php endif; ?>
             </div>
             <div style="display: grid; gap: 16px;">
                 <?php foreach ($phaseNames as $phaseKey => $phaseLabel): ?>
@@ -385,7 +477,7 @@ $packageTypes = [
     </div>
     
     <div style="display: flex; gap: 12px; margin-top: 24px;">
-        <button type="submit" class="btn btn--primary">
+        <button type="submit" class="btn btn--primary" id="save-project-btn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                 <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -394,6 +486,84 @@ $packageTypes = [
             Spremi projekt
         </button>
         <a href="projects.php" class="btn btn--secondary">Odustani</a>
+    </div>
+</form>
+
+<!-- Project Files Section (outside main form to avoid nested forms) -->
+<div class="card" style="margin-top: 24px;">
+    <div class="card__header">
+        <h2 class="card__title">Dokumenti i datoteke</h2>
+        <p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px;">Upload sporazuma, dokumenata i drugih datoteka</p>
+    </div>
+    <div class="card__body">
+        <!-- File Upload Form -->
+        <?php if ($id > 0): ?>
+        <form method="POST" action="" enctype="multipart/form-data" id="file-upload-form" style="margin-bottom: 24px;">
+                <div style="display: grid; gap: 16px;">
+                    <div id="file-uploads">
+                        <div class="file-upload-item" style="display: grid; grid-template-columns: 1fr 200px auto; gap: 12px; align-items: end; padding: 12px; background: var(--bg-input); border-radius: 8px; margin-bottom: 12px;">
+                            <div>
+                                <label style="display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 14px;">Datoteka</label>
+                                <input type="file" name="project_files[]" class="form-control" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar" style="background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            </div>
+                            <div>
+                                <label style="display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 14px;">Tip</label>
+                                <select name="file_types[]" class="form-control" style="background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <option value="agreement">Sporazum</option>
+                                    <option value="document" selected>Dokument</option>
+                                    <option value="other">Ostalo</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn--secondary btn--sm" onclick="addFileUpload()" style="height: fit-content;">+</button>
+                        </div>
+                    </div>
+                    <button type="submit" name="upload_files" class="btn btn--primary btn--sm" style="width: fit-content;">
+                        Upload datoteke
+                    </button>
+                </div>
+            </form>
+            <?php else: ?>
+            <div style="padding: 20px; background: var(--bg-input); border-radius: 8px; text-align: center; color: var(--text-secondary); margin-bottom: 24px;">
+                <p>Molimo prvo spremite projekt da biste mogli uploadati datoteke.</p>
+            </div>
+            <?php endif; ?>
+            
+            <!-- Existing Files -->
+            <?php if ($id > 0): ?>
+                <?php if (!empty($projectFiles)): ?>
+                <div style="border-top: 1px solid var(--border); padding-top: 20px;">
+                    <h3 style="color: var(--text-primary); margin-bottom: 16px; font-size: 16px;">Uploadane datoteke</h3>
+                    <div style="display: grid; gap: 12px;">
+                        <?php foreach ($projectFiles as $file): ?>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-input); border-radius: 8px;">
+                            <div style="flex: 1;">
+                                <div style="color: var(--text-primary); font-weight: 500; margin-bottom: 4px;">
+                                    <?php echo htmlspecialchars($file['file_name']); ?>
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">
+                                    <?php 
+                                    $fileTypeLabels = ['agreement' => 'Sporazum', 'document' => 'Dokument', 'other' => 'Ostalo'];
+                                    echo $fileTypeLabels[$file['file_type']] ?? 'Dokument';
+                                    ?>
+                                    • <?php echo number_format($file['file_size'] / 1024, 2); ?> KB
+                                    • <?php echo date('d.m.Y H:i', strtotime($file['uploaded_at'])); ?>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="../<?php echo htmlspecialchars($file['file_path']); ?>" target="_blank" class="btn btn--secondary btn--sm">Pregledaj</a>
+                                <a href="?id=<?php echo $id; ?>&delete_file=<?php echo $file['id']; ?>" class="btn btn--danger btn--sm" onclick="return confirm('Jeste li sigurni da želite obrisati ovu datoteku?')">Obriši</a>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div style="border-top: 1px solid var(--border); padding-top: 20px; text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <p>Nema uploadanih datoteka.</p>
+                </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
 </form>
 
@@ -423,6 +593,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Add file upload row
+function addFileUpload() {
+    const container = document.getElementById('file-uploads');
+    const newRow = document.createElement('div');
+    newRow.className = 'file-upload-item';
+    newRow.style.cssText = 'display: grid; grid-template-columns: 1fr 200px auto; gap: 12px; align-items: end; padding: 12px; background: var(--bg-input); border-radius: 8px; margin-bottom: 12px;';
+    newRow.innerHTML = `
+        <div>
+            <label style="display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 14px;">Datoteka</label>
+            <input type="file" name="project_files[]" class="form-control" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar" style="background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1);">
+        </div>
+        <div>
+            <label style="display: block; color: var(--text-primary); margin-bottom: 6px; font-size: 14px;">Tip</label>
+            <select name="file_types[]" class="form-control" style="background: var(--bg-dark); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <option value="agreement">Sporazum</option>
+                <option value="document" selected>Dokument</option>
+                <option value="other">Ostalo</option>
+            </select>
+        </div>
+        <button type="button" class="btn btn--danger btn--sm" onclick="this.parentElement.remove()" style="height: fit-content;">×</button>
+    `;
+    container.appendChild(newRow);
+}
+
 // Auto-populate checklist function
 function autopopulateChecklist(projectId, tier) {
     if (!confirm('Želite li automatski popuniti checklist za sve faze? Ovo će zamijeniti postojeće zadatke.')) {
@@ -434,6 +628,16 @@ function autopopulateChecklist(projectId, tier) {
     btn.disabled = true;
     btn.innerHTML = 'Učitavanje...';
     
+    // If project doesn't exist yet (new project), populate form fields directly
+    if (projectId === 0 || projectId === '0') {
+        populateChecklistForm(tier);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        alert('Checklist je automatski popunjen u formi. Spremite projekt da se zadaci sačuvaju.');
+        return;
+    }
+    
+    // For existing projects, use API
     fetch('project-autopopulate.php?project_id=' + projectId)
         .then(response => response.json())
         .then(data => {
@@ -455,6 +659,80 @@ function autopopulateChecklist(projectId, tier) {
             btn.disabled = false;
             btn.innerHTML = originalText;
         });
+}
+
+// Populate checklist form fields directly (for new projects)
+function populateChecklistForm(tier) {
+    // Checklist templates (same as PHP templates)
+    const templates = {
+        'basic': {
+            'agreement': ['Potvrditi zahtjeve klijenta', 'Definirati opseg projekta', 'Potpisati sporazum', 'Primiti početnu uplatu'],
+            'planning': ['Analizirati konkurenciju', 'Kreirati strukturu stranice', 'Planirati navigaciju', 'Odabrati boje i fontove'],
+            'design': ['Kreirati wireframe', 'Dizajnirati homepage', 'Dizajnirati ostale stranice', 'Pripremiti dizajn za development'],
+            'development': ['Postaviti HTML strukturu', 'Dodati CSS stilove', 'Implementirati JavaScript funkcionalnosti', 'Dodati kontakt formu', 'Integrirati Umami Analytics', 'Dodati Cloudflare Turnstile', 'Testirati responsive dizajn'],
+            'content': ['Pripremiti tekstove', 'Optimizirati slike', 'Dodati SEO meta tagove', 'Provjeriti pravopis'],
+            'testing': ['Testirati na različitim preglednicima', 'Testirati na mobilnim uređajima', 'Provjeriti brzinu učitavanja', 'Testirati kontakt formu'],
+            'final': ['Finalna provjera', 'Upload na Infonet.hr', 'Povezati domenu', 'Konfigurirati email sistem', 'Predati klijentu']
+        },
+        'professional': {
+            'agreement': ['Potvrditi zahtjeve klijenta', 'Definirati opseg projekta', 'Analizirati konkurenciju', 'Potpisati sporazum', 'Primiti početnu uplatu'],
+            'planning': ['Kreirati sitemap', 'Planirati informacijsku arhitekturu', 'Odabrati CMS ili framework', 'Planirati SEO strategiju', 'Definirati user flow'],
+            'design': ['Kreirati wireframes za sve stranice', 'Dizajnirati homepage', 'Dizajnirati unutarnje stranice', 'Kreirati UI komponente', 'Pripremiti design system', 'Dizajnirati mobilnu verziju'],
+            'development': ['Postaviti development okruženje', 'Kreirati bazu podataka', 'Implementirati backend funkcionalnosti', 'Razviti frontend', 'Integrirati CMS', 'Dodati admin panel', 'Implementirati SEO optimizacije', 'Dodati Umami Analytics', 'Dodati Cloudflare Turnstile', 'Testirati responsive dizajn'],
+            'content': ['Kreirati sve tekstove', 'Optimizirati sve slike', 'Dodati SEO meta tagove', 'Kreirati blog postove (ako potrebno)', 'Provjeriti pravopis i gramatiku'],
+            'testing': ['Testirati na različitim preglednicima', 'Testirati na mobilnim uređajima', 'Provjeriti brzinu učitavanja', 'Testirati sve forme', 'Testirati admin panel', 'Provjeriti SEO optimizacije'],
+            'final': ['Finalna provjera', 'Upload na Infonet.hr', 'Povezati domenu', 'Konfigurirati email sistem', 'Postaviti SSL certifikat', 'Predati klijentu', 'Obuka klijenta za admin panel']
+        },
+        'premium': {
+            'agreement': ['Potvrditi zahtjeve klijenta', 'Definirati opseg projekta', 'Analizirati konkurenciju', 'Kreirati projektni plan', 'Potpisati sporazum', 'Primiti početnu uplatu'],
+            'planning': ['Kreirati detaljnu sitemap', 'Planirati informacijsku arhitekturu', 'Odabrati tehnologije i framework', 'Planirati SEO strategiju', 'Definirati user personas', 'Planirati user experience', 'Kreirati content strategiju'],
+            'design': ['Kreirati wireframes za sve stranice', 'Dizajnirati homepage', 'Dizajnirati unutarnje stranice', 'Kreirati UI komponente', 'Pripremiti design system', 'Dizajnirati mobilnu verziju', 'Kreirati animacije i interakcije', 'Dizajnirati email template'],
+            'development': ['Postaviti development okruženje', 'Kreirati bazu podataka', 'Implementirati backend API', 'Razviti frontend aplikaciju', 'Integrirati CMS', 'Dodati custom admin panel', 'Implementirati napredne SEO optimizacije', 'Dodati Umami Analytics', 'Dodati Cloudflare Turnstile', 'Implementirati caching', 'Optimizirati performanse', 'Testirati responsive dizajn', 'Dodati PWA funkcionalnosti (ako potrebno)'],
+            'content': ['Kreirati sve tekstove', 'Optimizirati sve slike', 'Dodati SEO meta tagove', 'Kreirati blog postove', 'Kreirati video sadržaj (ako potrebno)', 'Provjeriti pravopis i gramatiku', 'Optimizirati za pretraživanje'],
+            'testing': ['Testirati na različitim preglednicima', 'Testirati na mobilnim uređajima', 'Provjeriti brzinu učitavanja', 'Testirati sve forme', 'Testirati admin panel', 'Provjeriti SEO optimizacije', 'Testirati security', 'Provjeriti accessibility', 'Load testing'],
+            'final': ['Finalna provjera', 'Upload na Infonet.hr', 'Povezati domenu', 'Konfigurirati email sistem', 'Postaviti SSL certifikat', 'Optimizirati performanse na produkciji', 'Predati klijentu', 'Obuka klijenta za admin panel', 'Postaviti backup sistem']
+        },
+        'custom': {
+            'agreement': ['Potvrditi zahtjeve klijenta', 'Definirati opseg projekta', 'Analizirati konkurenciju', 'Kreirati detaljni projektni plan', 'Potpisati sporazum', 'Primiti početnu uplatu'],
+            'planning': ['Kreirati detaljnu sitemap', 'Planirati informacijsku arhitekturu', 'Odabrati tehnologije i framework', 'Planirati SEO strategiju', 'Definirati user personas', 'Planirati user experience', 'Kreirati content strategiju', 'Planirati custom funkcionalnosti'],
+            'design': ['Kreirati wireframes za sve stranice', 'Dizajnirati homepage', 'Dizajnirati unutarnje stranice', 'Kreirati UI komponente', 'Pripremiti design system', 'Dizajnirati mobilnu verziju', 'Kreirati animacije i interakcije', 'Dizajnirati custom funkcionalnosti'],
+            'development': ['Postaviti development okruženje', 'Kreirati bazu podataka', 'Implementirati backend API', 'Razviti frontend aplikaciju', 'Integrirati CMS', 'Dodati custom admin panel', 'Implementirati custom funkcionalnosti', 'Implementirati napredne SEO optimizacije', 'Dodati Umami Analytics', 'Dodati Cloudflare Turnstile', 'Implementirati caching', 'Optimizirati performanse', 'Testirati responsive dizajn'],
+            'content': ['Kreirati sve tekstove', 'Optimizirati sve slike', 'Dodati SEO meta tagove', 'Kreirati blog postove', 'Provjeriti pravopis i gramatiku', 'Optimizirati za pretraživanje'],
+            'testing': ['Testirati na različitim preglednicima', 'Testirati na mobilnim uređajima', 'Provjeriti brzinu učitavanja', 'Testirati sve forme', 'Testirati admin panel', 'Provjeriti SEO optimizacije', 'Testirati security', 'Provjeriti accessibility', 'Testirati custom funkcionalnosti'],
+            'final': ['Finalna provjera', 'Upload na Infonet.hr', 'Povezati domenu', 'Konfigurirati email sistem', 'Postaviti SSL certifikat', 'Optimizirati performanse na produkciji', 'Predati klijentu', 'Obuka klijenta za admin panel', 'Postaviti backup sistem']
+        }
+    };
+    
+    const template = templates[tier] || templates['basic'];
+    const phases = ['agreement', 'planning', 'design', 'development', 'content', 'testing', 'final'];
+    
+    phases.forEach(function(phase) {
+        const container = document.getElementById('checklist-' + phase);
+        if (!container) return;
+        
+        // Clear existing items
+        container.innerHTML = '';
+        
+        // Add items from template
+        if (template[phase]) {
+            template[phase].forEach(function(task, index) {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border-radius: 6px;';
+                div.innerHTML = `
+                    <input type="checkbox" name="checklist_completed[${phase}][${index}]" style="cursor: pointer;">
+                    <input type="text" class="form-control" name="checklist[${phase}][]" value="${escapeHtml(task)}" placeholder="Zadatak..." style="flex: 1;" required>
+                    <button type="button" class="btn btn--danger btn--sm" onclick="this.parentElement.remove()">×</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 </script>
 

@@ -15,11 +15,16 @@ require_once 'includes/header.php';
 
 <!-- Basic Website Tier -->
 <div class="card" style="border-left: 4px solid #10b981;">
-    <div class="card__header">
-        <h2 class="card__title" style="color: #10b981;">📄 Osnovna Stranica (Basic Website) - €300</h2>
-        <p style="color: var(--text-secondary); margin-top: 8px;">ETA: 24-48 sati | Static HTML/CSS/JS website</p>
+    <div class="card__header" style="cursor: pointer;" onclick="toggleTier('basic')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 class="card__title" style="color: #10b981; margin: 0;">📄 Osnovna Stranica (Basic Website) - €300</h2>
+                <p style="color: var(--text-secondary); margin-top: 8px; margin-bottom: 0;">ETA: 24-48 sati | Static HTML/CSS/JS website</p>
+            </div>
+            <span id="basic-toggle" style="font-size: 24px; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+        </div>
     </div>
-    <div class="card__body">
+    <div class="card__body" id="basic-body" style="display: none;">
         <div style="display: grid; gap: 20px;">
             <div style="padding: 16px; background: var(--bg-input); border-radius: 8px;">
                 <h3 style="color: var(--primary); margin-bottom: 12px;">✅ What to Include (DO):</h3>
@@ -158,11 +163,16 @@ require_once 'includes/header.php';
 
 <!-- Professional Website Tier -->
 <div class="card" style="border-left: 4px solid #6366f1;">
-    <div class="card__header">
-        <h2 class="card__title" style="color: #6366f1;">💼 Profesionalna Stranica (Professional Website) - €500</h2>
-        <p style="color: var(--text-secondary); margin-top: 8px;">ETA: 72 sata | CMS with database, blog, gallery</p>
+    <div class="card__header" style="cursor: pointer;" onclick="toggleTier('professional')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 class="card__title" style="color: #6366f1; margin: 0;">💼 Profesionalna Stranica (Professional Website) - €500</h2>
+                <p style="color: var(--text-secondary); margin-top: 8px; margin-bottom: 0;">ETA: 72 sata | CMS with database, blog, gallery</p>
+            </div>
+            <span id="professional-toggle" style="font-size: 24px; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+        </div>
     </div>
-    <div class="card__body">
+    <div class="card__body" id="professional-body" style="display: none;">
         <div style="display: grid; gap: 20px;">
             <div style="padding: 16px; background: var(--bg-input); border-radius: 8px;">
                 <h3 style="color: var(--primary); margin-bottom: 12px;">✅ What to Include (DO):</h3>
@@ -344,11 +354,16 @@ require_once 'includes/header.php';
 
 <!-- Premium Website Tier -->
 <div class="card" style="border-left: 4px solid #a855f7;">
-    <div class="card__header">
-        <h2 class="card__title" style="color: #a855f7;">⭐ Premium Stranica (Premium Website) - €1000</h2>
-        <p style="color: var(--text-secondary); margin-top: 8px;">ETA: 7 dana | E-commerce, multi-user, payment integration</p>
+    <div class="card__header" style="cursor: pointer;" onclick="toggleTier('premium')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 class="card__title" style="color: #a855f7; margin: 0;">⭐ Premium Stranica (Premium Website) - €1000</h2>
+                <p style="color: var(--text-secondary); margin-top: 8px; margin-bottom: 0;">ETA: 7 dana | E-commerce, multi-user, payment integration</p>
+            </div>
+            <span id="premium-toggle" style="font-size: 24px; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+        </div>
     </div>
-    <div class="card__body">
+    <div class="card__body" id="premium-body" style="display: none;">
         <div style="display: grid; gap: 20px;">
             <div style="padding: 16px; background: var(--bg-input); border-radius: 8px;">
                 <h3 style="color: var(--primary); margin-bottom: 12px;">✅ What to Include (DO):</h3>
@@ -521,11 +536,16 @@ require_once 'includes/header.php';
 
 <!-- Custom Project Tier -->
 <div class="card" style="border-left: 4px solid #f59e0b;">
-    <div class="card__header">
-        <h2 class="card__title" style="color: #f59e0b;">🎯 Custom Projekt (Custom Project) - Po dogovoru</h2>
-        <p style="color: var(--text-secondary); margin-top: 8px;">Fully customized solution based on client requirements</p>
+    <div class="card__header" style="cursor: pointer;" onclick="toggleTier('custom')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 class="card__title" style="color: #f59e0b; margin: 0;">🎯 Custom Projekt (Custom Project) - Po dogovoru</h2>
+                <p style="color: var(--text-secondary); margin-top: 8px; margin-bottom: 0;">Fully customized solution based on client requirements</p>
+            </div>
+            <span id="custom-toggle" style="font-size: 24px; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+        </div>
     </div>
-    <div class="card__body">
+    <div class="card__body" id="custom-body" style="display: none;">
         <div style="padding: 16px; background: var(--bg-input); border-radius: 8px;">
             <h3 style="color: var(--primary); margin-bottom: 12px;">📋 Process:</h3>
             <ol style="line-height: 2; color: var(--text-secondary); padding-left: 20px;">
@@ -584,5 +604,22 @@ require_once 'includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+function toggleTier(tier) {
+    const body = document.getElementById(tier + '-body');
+    const toggle = document.getElementById(tier + '-toggle');
+    
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        toggle.textContent = '▲';
+        toggle.style.transform = 'rotate(0deg)';
+    } else {
+        body.style.display = 'none';
+        toggle.textContent = '▼';
+        toggle.style.transform = 'rotate(0deg)';
+    }
+}
+</script>
 
 <?php require_once 'includes/footer.php'; ?>
