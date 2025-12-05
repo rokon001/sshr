@@ -46,6 +46,9 @@ if (dbAvailable()) {
   
   <!-- Primary Meta Tags -->
   <title>Start Smart HR - Profesionalni Web Dizajn i Razvoj Web Stranica | Zagreb, Hrvatska</title>
+
+  <meta name="google-site-verification" content="-hc7aZ87nCjYSf40jWRJNxwa0R19IiSIMGgNN-Ydl1E" />
+  
   <meta name="title" content="Start Smart HR - Profesionalni Web Dizajn i Razvoj Web Stranica | Zagreb, Hrvatska">
   <meta name="description" content="Start Smart HR - Profesionalna izrada web stranica u Zagrebu. Moderan web dizajn, brza izrada, SEO optimizacija. Kontaktirajte nas za besplatnu ponudu!">
   <meta name="keywords" content="Start Smart HR, web dizajn Zagreb, izrada web stranica, web development Hrvatska, SEO optimizacija, responzivni web dizajn, profesionalni web dizajn">
@@ -480,6 +483,11 @@ if (dbAvailable()) {
         </div>
       </div>
       
+      <div class="packages__custom-notice" style="text-align: center; color: #00ff00; font-size: 1rem; font-weight: bold; margin: 3rem 0; padding: 1.5rem; line-height: 1.3;">
+        <span data-lang-hr>Ne gradimo web stranice s WordPress-om, Wix-om, Squarespace-om... Gradimo prilagođena rješenja koja su napisana od nule prilagođena vašim specifičnim potrebama</span>
+        <span data-lang-en style="display:none;">We do not build websites with WordPress, Wix, Squarespace... We build custom solutions which are written from scratch tailored to your specific needs</span>
+      </div>
+      
       <div class="packages__grid">
         <?php 
         foreach ($packages as $pkg): 
@@ -651,6 +659,61 @@ if (dbAvailable()) {
           </div>
         </div>
         <?php endforeach; ?>
+      </div>
+      
+      <!-- Subpages Pricing Note -->
+      <div class="packages__note">
+        <button class="btn btn--outline toggle-subpages" onclick="toggleSubpages('subpages-info')">
+          <span class="btn__text" data-translate="package-subpages">Dodatne podstranice</span>
+        </button>
+        <div class="subpages-info" id="subpages-info">
+          <div class="subpages-info__content">
+            <p class="subpages-info__text">
+              <span data-lang-hr>
+                <strong>Profesionalna Stranica</strong> uključuje <strong>10 podstranica</strong> (kontakt, o nama, itd.), 
+                a <strong>Premium Stranica</strong> uključuje <strong>15 podstranica</strong>. 
+                Za svaku dodatnu podstranicu iznad uključenog broja primjenjuje se sljedeća cjenovna struktura:
+              </span>
+              <span data-lang-en style="display:none;">
+                <strong>Professional Website</strong> includes <strong>10 subpages</strong> (contact, about, etc.), 
+                and <strong>Premium Website</strong> includes <strong>15 subpages</strong>. 
+                For each additional subpage beyond the included amount, the following pricing structure applies:
+              </span>
+            </p>
+            <table class="subpages-pricing-table">
+              <thead>
+                <tr>
+                  <th>
+                    <span data-lang-hr>Broj podstranica</span>
+                    <span data-lang-en style="display:none;">Number of Subpages</span>
+                  </th>
+                  <th>
+                    <span data-lang-hr>Cijena po podstranici</span>
+                    <span data-lang-en style="display:none;">Price per Subpage</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1-5</td><td>€75</td></tr>
+                <tr><td>6-10</td><td>€73</td></tr>
+                <tr><td>11-15</td><td>€70</td></tr>
+                <tr><td>16-20</td><td>€68</td></tr>
+                <tr><td>21-25</td><td>€65</td></tr>
+                <tr><td>26-30</td><td>€63</td></tr>
+                <tr><td>31-35</td><td>€60</td></tr>
+                <tr><td>36-40</td><td>€58</td></tr>
+              </tbody>
+            </table>
+            <p class="subpages-info__footer">
+              <span data-lang-hr>
+                Za projekte s više od <strong>40 ukupnih podstranica</strong>, molimo kontaktirajte nas za prilagođenu ponudu (<strong>Prilagođeni Projekt</strong>).
+              </span>
+              <span data-lang-en style="display:none;">
+                For projects with more than <strong>40 total subpages</strong>, please contact us for a customized quote (<strong>Custom Project</strong>).
+              </span>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>

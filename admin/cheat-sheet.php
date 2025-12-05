@@ -565,6 +565,31 @@ require_once 'includes/header.php';
     </div>
 </div>
 
+<!-- Pricing References Section -->
+<div class="card" style="border-left: 4px solid #ef4444;">
+    <div class="card__header" style="cursor: pointer;" onclick="toggleTier('pricing')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 class="card__title" style="color: #ef4444; margin: 0;">💰 Pricing References</h2>
+                <p style="color: var(--text-secondary); margin-top: 8px; margin-bottom: 0;">How much to charge for additional features and services</p>
+            </div>
+            <span id="pricing-toggle" style="font-size: 24px; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+        </div>
+    </div>
+    <div class="card__body" id="pricing-body" style="display: none;">
+        <div style="padding: 16px; background: var(--bg-input); border-radius: 8px;">
+            <h3 style="color: #ef4444; margin-bottom: 12px;">💵 Additional Features & Services Pricing</h3>
+            <ul style="list-style: none; padding: 0; line-height: 2; color: var(--text-secondary);">
+                <li>• <strong>Additional Languages:</strong> €80 per language (first 2 languages - English and Croatian - are free)</li>
+                <li>• <strong>Custom Data Pulling from API:</strong> €150 per API</li>
+            </ul>
+            <p style="color: var(--text-secondary); margin-top: 16px; padding: 12px; background: var(--bg-dark); border-radius: 8px; font-style: italic;">
+                More pricing items will be added here as needed.
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- Quick Reference Section -->
 <div class="card">
     <div class="card__header">

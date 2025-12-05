@@ -1445,6 +1445,39 @@ function toggleDetails(id) {
   }
 }
 
+function toggleSubpages(id) {
+  const element = document.getElementById(id);
+  if (element) {
+    const isActive = element.classList.contains('subpages-info--active');
+    element.classList.toggle('subpages-info--active');
+    
+    // Find the corresponding button
+    const button = document.querySelector(`[onclick="toggleSubpages('${id}')"]`);
+    if (button) {
+      const textElement = button.querySelector('.btn__text');
+      if (textElement) {
+        const currentLang = document.documentElement.getAttribute('data-lang') || 'hr';
+        const translations = {
+          hr: {
+            'package-subpages': 'Dodatne podstranice',
+            'package-subpages-hide': 'Sakrij dodatne podstranice'
+          },
+          en: {
+            'package-subpages': 'Additional Subpages',
+            'package-subpages-hide': 'Hide Additional Subpages'
+          }
+        };
+        
+        if (isActive) {
+          textElement.textContent = translations[currentLang]['package-subpages'];
+        } else {
+          textElement.textContent = translations[currentLang]['package-subpages-hide'];
+        }
+      }
+    }
+  }
+}
+
 function toggleOptional(id) {
   const element = document.getElementById(id);
   if (element) {

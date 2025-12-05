@@ -147,3 +147,4 @@ if (dbAvailable()) {
 
 <?php require_once 'includes/footer.php'; ?>
 
+
